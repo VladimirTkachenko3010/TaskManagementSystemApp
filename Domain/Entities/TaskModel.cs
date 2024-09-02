@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    public class Task
+    public class TaskModel
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public string Title { get; set; }
 
-        public string Description { get; set; }
+        public string? Description { get; set; }
 
         public DateTime? DueDate { get; set; }
 
@@ -31,6 +31,6 @@ namespace Domain.Entities
 
         // Relationship with User entity
         public Guid UserId { get; set; }
-        public User User { get; set; }
+        public UserModel User { get; set; }
     }
 }
