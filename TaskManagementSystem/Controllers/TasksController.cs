@@ -1,6 +1,7 @@
 ﻿using Application.Services;
 using Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 
 namespace TaskManagementSystem.Controllers
@@ -18,9 +19,18 @@ namespace TaskManagementSystem.Controllers
 
 
         [HttpPost]
-        public async Task<IActionResult> CreateTask([FromBody] TaskModel task)
+        public async Task<IActionResult> CreateTask([FromBody] CreateTaskModel taskModel)
         {
-            var userId = GetCurrentUserId(); // Implement this method to get the current user's ID
+            var userId = GetCurrentUserId();
+            var task = new TaskModel
+            {
+                Title = taskModel.Title,
+                Description = taskModel.Description,
+                DueDate = taskModel.DueDate,
+                Status = taskModel.Status,
+                Priority = taskModel.Priority,
+                UserId = userId
+            };
             var createdTask = await _taskService.CreateTaskAsync(task, userId);
             return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
         }
@@ -29,7 +39,7 @@ namespace TaskManagementSystem.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(Guid id)
         {
-            var userId = GetCurrentUserId(); // Implement this method to get the current user's ID
+            var userId = GetCurrentUserId();
             var task = await _taskService.GetTaskByIdAsync(id, userId);
 
             if (task == null)
@@ -42,20 +52,30 @@ namespace TaskManagementSystem.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTasks()
         {
-            var userId = GetCurrentUserId(); // Implement this method to get the current user's ID
+            var userId = GetCurrentUserId(); 
             var tasks = await _taskService.GetTasksByUserIdAsync(userId);
             return Ok(tasks);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTask(Guid id, [FromBody] TaskModel task)
+        public async Task<IActionResult> UpdateTask(Guid id, [FromBody] UpdateTaskModel taskModel)
         {
-            var userId = GetCurrentUserId(); // Implement this method to get the current user's ID
-            task.Id = id;
-            var updatedTask = await _taskService.UpdateTaskAsync(task, userId);
+            var userId = GetCurrentUserId();
 
-            if (updatedTask == null)
+            var existingTask = await _taskService.GetTaskByIdAsync(id, userId);
+            if (existingTask == null)
+            {
                 return NotFound();
+            }
+
+            existingTask.Title = taskModel.Title;
+            existingTask.Description = taskModel.Description;
+            existingTask.DueDate = taskModel.DueDate;
+            existingTask.Status = taskModel.Status;
+            existingTask.Priority = taskModel.Priority;
+            existingTask.UpdatedAt = DateTime.UtcNow;
+
+            var updatedTask = await _taskService.UpdateTaskAsync(existingTask, userId);
 
             return Ok(updatedTask);
         }
@@ -63,7 +83,7 @@ namespace TaskManagementSystem.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(Guid id)
         {
-            var userId = GetCurrentUserId(); // Implement this method to get the current user's ID
+            var userId = GetCurrentUserId(); 
             var result = await _taskService.DeleteTaskAsync(id, userId);
 
             if (!result)
@@ -72,11 +92,33 @@ namespace TaskManagementSystem.Controllers
             return NoContent();
         }
 
-        // Dummy method for demonstration
         private Guid GetCurrentUserId()
         {
-            // Replace with actual implementation to retrieve user ID from JWT or session
-            return Guid.NewGuid();
+            if (User.Identity is ClaimsIdentity identity)
+            {
+                var claims = identity.Claims.ToList();
+                foreach (var claim in claims)
+                {
+                    Console.WriteLine($"Claim type: {claim.Type}, value: {claim.Value}");
+                }
+
+                Console.WriteLine($"IsAuthenticated: {User.Identity.IsAuthenticated}");
+                var userIdClaim = identity.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null)
+                {
+                    Console.WriteLine($"User ID found: {userIdClaim.Value}");
+                    return Guid.Parse(userIdClaim.Value);
+                }
+                else
+                {
+                    Console.WriteLine("User ID claim not found");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Identity is not ClaimsIdentity");
+            }
+            throw new UnauthorizedAccessException("User ID not found in token");
         }
     }
 }

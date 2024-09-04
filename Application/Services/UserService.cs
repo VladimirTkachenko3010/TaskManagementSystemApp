@@ -1,14 +1,11 @@
 ﻿using Domain.Entities;
 using Infrastructure.Data;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using TaskManagementSystem.Configuration;
 
 
@@ -18,8 +15,10 @@ namespace Application.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly JwtSettings _jwtSettings;
+        private readonly IConfiguration _configuration;
 
-        public UserService(ApplicationDbContext context, IOptions<JwtSettings> jwtSettings)
+
+        public UserService(ApplicationDbContext context, IConfiguration configuration, IOptions<JwtSettings> jwtSettings)
         {
             _context = context;
             _jwtSettings = jwtSettings.Value;
@@ -68,19 +67,21 @@ namespace Application.Services
 
         public string GenerateJwtToken(UserModel user)
         {
+            List<Claim> claims = new List<Claim> {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.Username)
+            };
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_jwtSettings.Secret);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
-                }),
-                Expires = DateTime.UtcNow.AddDays(7),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature);
+            var token = new JwtSecurityToken(
+                    claims: claims,
+                    expires: DateTime.Now.AddDays(1),
+                    signingCredentials: creds
+                );
+            var jwt = tokenHandler.WriteToken(token);
+            return jwt;
         }
     }
 }

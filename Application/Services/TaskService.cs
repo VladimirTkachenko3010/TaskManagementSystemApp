@@ -23,6 +23,8 @@ namespace Application.Services
         public async Task<TaskModel> CreateTaskAsync(TaskModel task, Guid userId)
         {
             task.UserId = userId;
+            task.CreatedAt = DateTime.UtcNow;
+            task.UpdatedAt = DateTime.UtcNow;
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
             return task;
