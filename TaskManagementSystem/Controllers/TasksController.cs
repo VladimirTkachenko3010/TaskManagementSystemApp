@@ -1,9 +1,11 @@
 ﻿using Application.Services;
 using Domain.Entities;
 using Domain.Enumerations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 
 namespace TaskManagementSystem.Controllers
@@ -13,13 +15,15 @@ namespace TaskManagementSystem.Controllers
     public class TasksController : ControllerBase
     {
         private readonly TaskService _taskService;
+        private readonly ILogger<TasksController> _logger;
 
-        public TasksController(TaskService taskService)
+        public TasksController(ILogger<TasksController> logger, TaskService taskService)
         {
+            _logger = logger;
             _taskService = taskService;
         }
 
-
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskModel taskModel)
         {
@@ -34,10 +38,13 @@ namespace TaskManagementSystem.Controllers
                 UserId = userId
             };
             var createdTask = await _taskService.CreateTaskAsync(task, userId);
+            _logger.LogInformation($"Task {createdTask.Title} created for user {userId}.");
+
             return CreatedAtAction(nameof(GetTaskById), new { id = createdTask.Id }, createdTask);
         }
 
 
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(Guid id)
         {
@@ -47,10 +54,12 @@ namespace TaskManagementSystem.Controllers
             if (task == null)
                 return NotFound();
 
+            _logger.LogInformation($"Get task: {task.Title} for user {userId}.");
             return Ok(task);
         }
 
 
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetTasks(
             [FromQuery] Domain.Enumerations.TaskStatus? status = null,
@@ -63,9 +72,15 @@ namespace TaskManagementSystem.Controllers
         {
             var userId = GetCurrentUserId(); 
             var tasks = await _taskService.GetTasksByFiltersAsync(userId, status, dueDate, priority, sortBy.ToString(), sortDescending, page, pageSize);
+
+            foreach (var task in tasks)
+            {
+                _logger.LogInformation($"Get tasks by filters: {task.Title} for user {userId}.");
+            }
             return Ok(tasks);
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(Guid id, [FromBody] UpdateTaskModel taskModel)
         {
@@ -86,9 +101,11 @@ namespace TaskManagementSystem.Controllers
 
             var updatedTask = await _taskService.UpdateTaskAsync(existingTask, userId);
 
+            _logger.LogInformation($"Updated task: {updatedTask.Title} from {existingTask.Title} for user {userId}.");
             return Ok(updatedTask);
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(Guid id)
         {
@@ -108,24 +125,24 @@ namespace TaskManagementSystem.Controllers
                 var claims = identity.Claims.ToList();
                 foreach (var claim in claims)
                 {
-                    Console.WriteLine($"Claim type: {claim.Type}, value: {claim.Value}");
+                    _logger.LogInformation($"Claim type: {claim.Type}, value: {claim.Value}");
                 }
 
-                Console.WriteLine($"IsAuthenticated: {User.Identity.IsAuthenticated}");
+                _logger.LogInformation($"IsAuthenticated: {User.Identity.IsAuthenticated}");
                 var userIdClaim = identity.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim != null)
                 {
-                    Console.WriteLine($"User ID found: {userIdClaim.Value}");
+                    _logger.LogInformation($"User ID found: {userIdClaim.Value}");
                     return Guid.Parse(userIdClaim.Value);
                 }
                 else
                 {
-                    Console.WriteLine("User ID claim not found");
+                    _logger.LogInformation("User ID claim not found");
                 }
             }
             else
             {
-                Console.WriteLine("Identity is not ClaimsIdentity");
+                _logger.LogInformation("Identity is not ClaimsIdentity");
             }
             throw new UnauthorizedAccessException("User ID not found in token");
         }

@@ -2,6 +2,7 @@
 using Domain.Enumerations;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,9 +14,11 @@ namespace Application.Services
     public class TaskService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<TaskService> _logger;
 
-        public TaskService(ApplicationDbContext context)
+        public TaskService(ILogger<TaskService> logger, ApplicationDbContext context)
         {
+            _logger = logger;
             _context = context;
         }
 
@@ -125,6 +128,7 @@ namespace Application.Services
 
             if (task == null) return false;
 
+            _logger.LogInformation($"Task {task.Title} deleted for user {userId}.");
             _context.Tasks.Remove(task);
             await _context.SaveChangesAsync();
 
