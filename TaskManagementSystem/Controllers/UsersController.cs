@@ -1,6 +1,5 @@
 ﻿using Application.Services;
 using Domain.Entities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace TaskManagementSystem.Controllers
@@ -23,17 +22,24 @@ namespace TaskManagementSystem.Controllers
             if (_userService.UserExists(registerModel.Username, registerModel.Email))
                 return BadRequest("Username or Email already exists.");
 
-            var user = new UserModel
+            try
             {
-                Username = registerModel.Username,
-                Email = registerModel.Email,
-                PasswordHash = _userService.HashPassword(registerModel.Password)
-            };
+                var user = new UserModel
+                {
+                    Username = registerModel.Username,
+                    Email = registerModel.Email
+                };
 
-            // Save the user
-            await _userService.CreateUserAsync(user);
+                // Password hashing and user creation happens in UserService
+                // Save the user
+                await _userService.CreateUserAsync(user, registerModel.Password);
 
-            return Ok(new { Message = "User registered successfully." });
+                return Ok(new { Message = "User registered successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message); 
+            }
         }
 
         [HttpPost("login")]

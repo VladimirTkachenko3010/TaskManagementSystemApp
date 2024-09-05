@@ -1,11 +1,13 @@
 ﻿using Domain.Entities;
 using Infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using TaskManagementSystem.Configuration;
 
 
@@ -32,8 +34,15 @@ namespace Application.Services
 
 
         // Create a new user
-        public async Task<UserModel> CreateUserAsync(UserModel user)
+        public async Task<UserModel> CreateUserAsync(UserModel user, string password)
         {
+
+            if (!ValidatePassword(password, out string errorMessage))
+            {
+                throw new ArgumentException(errorMessage);
+            }
+
+            user.PasswordHash = HashPassword(password);
             user.CreatedAt = DateTime.UtcNow;
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -52,6 +61,38 @@ namespace Application.Services
                 return null;
 
             return user;
+        }
+
+
+        public static bool ValidatePassword(string password, out string errorMessage)
+        {
+            if (password.Length < 8)
+            {
+                errorMessage = "Password must be at least 8 characters long.";
+                return false;
+            }
+
+            if (!password.Any(char.IsUpper))
+            {
+                errorMessage = "Password must contain at least one uppercase letter.";
+                return false;
+            }
+
+            if (!password.Any(char.IsDigit))
+            {
+                errorMessage = "Password must contain at least one digit.";
+                return false;
+            }
+
+            // Presence of at least one special character
+            if (!Regex.IsMatch(password, @"[\W_]"))
+            {
+                errorMessage = "Password must contain at least one special character.";
+                return false;
+            }
+
+            errorMessage = string.Empty;
+            return true;
         }
 
         public string HashPassword(string password)
