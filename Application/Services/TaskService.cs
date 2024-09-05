@@ -1,4 +1,5 @@
 ﻿using Domain.Entities;
+using Domain.Enumerations;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -29,6 +30,51 @@ namespace Application.Services
             await _context.SaveChangesAsync();
             return task;
         }
+
+
+        public async Task<IEnumerable<TaskModel>> GetTasksByFiltersAsync(
+            Guid userId,
+            Domain.Enumerations.TaskStatus? status,
+            DateTime? dueDate,
+            TaskPriority? priority,
+            string sortBy,
+            bool sortDescending,
+            int page,
+            int pageSize)
+        {
+            var query = _context.Tasks.Where(t => t.UserId == userId);
+
+            // Filtration
+            if (status.HasValue)
+            {
+                query = query.Where(t => t.Status == status.Value);
+            }
+
+            if (dueDate.HasValue)
+            {
+                query = query.Where(t => t.DueDate.Value.Date == dueDate.Value.Date);
+            }
+
+            if (priority.HasValue)
+            {
+                query = query.Where(t => t.Priority == priority.Value);
+            }
+
+            // Sorting
+            query = sortBy.ToLower() switch
+            {
+                "duedate" => sortDescending ? query.OrderByDescending(t => t.DueDate) : query.OrderBy(t => t.DueDate),
+                "priority" => sortDescending ? query.OrderByDescending(t => t.Priority) : query.OrderBy(t => t.Priority),
+                _ => sortDescending ? query.OrderByDescending(t => t.DueDate) : query.OrderBy(t => t.DueDate)
+            };
+
+            // Pagination
+            var skip = (page - 1) * pageSize;
+            query = query.Skip(skip).Take(pageSize);
+
+            return await query.ToListAsync();
+        }
+
 
         public async Task<TaskModel> GetTaskByIdAsync(Guid taskId, Guid userId)
         {

@@ -1,6 +1,8 @@
 ﻿using Application.Services;
 using Domain.Entities;
+using Domain.Enumerations;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using System.Security.Claims;
 
 
@@ -50,10 +52,17 @@ namespace TaskManagementSystem.Controllers
 
 
         [HttpGet]
-        public async Task<IActionResult> GetTasks()
+        public async Task<IActionResult> GetTasks(
+            [FromQuery] Domain.Enumerations.TaskStatus? status = null,
+            [FromQuery] DateTime? dueDate = null,
+            [FromQuery] TaskPriority? priority = null,
+            [FromQuery] TaskSortOptions sortBy = TaskSortOptions.DueDate,
+            [FromQuery] bool sortDescending = false,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
         {
             var userId = GetCurrentUserId(); 
-            var tasks = await _taskService.GetTasksByUserIdAsync(userId);
+            var tasks = await _taskService.GetTasksByFiltersAsync(userId, status, dueDate, priority, sortBy.ToString(), sortDescending, page, pageSize);
             return Ok(tasks);
         }
 

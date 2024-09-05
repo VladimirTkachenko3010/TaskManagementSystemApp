@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Text.Json.Serialization;
 using TaskManagementSystem.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -77,6 +78,11 @@ builder.Services.AddSwaggerGen(c =>
             new List<string>()
         }
     });
+});
+
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 var app = builder.Build();
