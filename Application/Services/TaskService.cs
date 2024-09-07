@@ -1,20 +1,17 @@
-﻿using Domain.Entities;
+﻿using Application.Interfaces;
+using Domain.Entities;
 using Domain.Enumerations;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
-    public class TaskService
+    public class TaskService : ITaskService
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<TaskService> _logger;
+
 
         public TaskService(ILogger<TaskService> logger, ApplicationDbContext context)
         {
@@ -22,8 +19,18 @@ namespace Application.Services
             _context = context;
         }
 
+        public TaskService(ApplicationDbContext context)
+        {
+            _context = context;
+        }
 
-        // Create a new task
+
+        /// <summary>
+        /// Create a new task
+        /// </summary>
+        /// <param name="task"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task<TaskModel> CreateTaskAsync(TaskModel task, Guid userId)
         {
             task.UserId = userId;
@@ -34,7 +41,18 @@ namespace Application.Services
             return task;
         }
 
-
+        /// <summary>
+        /// get tasks with filters
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="status"></param>
+        /// <param name="dueDate"></param>
+        /// <param name="priority"></param>
+        /// <param name="sortBy"></param>
+        /// <param name="sortDescending"></param>
+        /// <param name="page"></param>
+        /// <param name="pageSize"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<TaskModel>> GetTasksByFiltersAsync(
             Guid userId,
             Domain.Enumerations.TaskStatus? status,
@@ -79,6 +97,12 @@ namespace Application.Services
         }
 
 
+        /// <summary>
+        /// get tasks by id
+        /// </summary>
+        /// <param name="taskId"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task<TaskModel> GetTaskByIdAsync(Guid taskId, Guid userId)
         {
             return await _context.Tasks
@@ -87,7 +111,12 @@ namespace Application.Services
         }
 
 
-        // Read tasks for a specific user
+
+        /// <summary>
+        /// Read tasks for a specific user
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<TaskModel>> GetTasksByUserIdAsync(Guid userId)
         {
             return await _context.Tasks
@@ -96,7 +125,13 @@ namespace Application.Services
         }
 
 
-        // Update a task
+
+        /// <summary>
+        /// Update a task
+        /// </summary>
+        /// <param name="updatedTask"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task<TaskModel> UpdateTaskAsync(TaskModel updatedTask, Guid userId)
         {
             var task = await _context.Tasks
@@ -119,7 +154,13 @@ namespace Application.Services
         }
 
 
-        // Delete a task
+
+        /// <summary>
+        /// Delete a task
+        /// </summary>
+        /// <param name="taskId"></param>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         public async Task<bool> DeleteTaskAsync(Guid taskId, Guid userId)
         {
             var task = await _context.Tasks

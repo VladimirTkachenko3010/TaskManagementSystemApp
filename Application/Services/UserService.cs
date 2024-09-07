@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using Application.Interfaces;
+using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
@@ -13,12 +14,11 @@ using TaskManagementSystem.Configuration;
 
 namespace Application.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
         private readonly ApplicationDbContext _context;
         private readonly JwtSettings _jwtSettings;
         private readonly IConfiguration _configuration;
-
 
         public UserService(ApplicationDbContext context, IConfiguration configuration, IOptions<JwtSettings> jwtSettings)
         {
@@ -26,14 +26,31 @@ namespace Application.Services
             _jwtSettings = jwtSettings.Value;
         }
 
-        // Check if a user with the given username or email already exists
+        public UserService(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+
+        /// <summary>
+        /// Check if a user with the given username or email already exists
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="email"></param>
+        /// <returns></returns>
         public bool UserExists(string username, string email)
         {
             return _context.Users.Any(u => u.Username == username || u.Email == email);
         }
 
 
-        // Create a new user
+        /// <summary>
+        /// Create a new user
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
         public async Task<UserModel> CreateUserAsync(UserModel user, string password)
         {
 
@@ -51,7 +68,13 @@ namespace Application.Services
             return user;
         }
 
-        // Authenticate user by username/email and password
+
+        /// <summary>
+        /// Authenticate user by username/email and password
+        /// </summary>
+        /// <param name="usernameOrEmail"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
         public UserModel Authenticate(string usernameOrEmail, string password)
         {
             var user = _context.Users.SingleOrDefault(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);
@@ -64,6 +87,12 @@ namespace Application.Services
         }
 
 
+        /// <summary>
+        /// validate password
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="errorMessage"></param>
+        /// <returns></returns>
         public static bool ValidatePassword(string password, out string errorMessage)
         {
             if (password.Length < 8)
@@ -95,17 +124,35 @@ namespace Application.Services
             return true;
         }
 
+        
+        /// <summary>
+        /// hash password with BCrypt
+        /// </summary>
+        /// <param name="password"></param>
+        /// <returns></returns>
         public string HashPassword(string password)
         {
             return BCrypt.Net.BCrypt.HashPassword(password);
         }
 
+
+        /// <summary>
+        /// verify password with BCrypt
+        /// </summary>
+        /// <param name="password"></param>
+        /// <param name="hashedPassword"></param>
+        /// <returns></returns>
         public bool VerifyPassword(string password, string hashedPassword)
         {
             return BCrypt.Net.BCrypt.Verify(password, hashedPassword);
         }
 
 
+        /// <summary>
+        /// Generate Jwt token
+        /// </summary>
+        /// <param name="user"></param>
+        /// <returns></returns>
         public string GenerateJwtToken(UserModel user)
         {
             List<Claim> claims = new List<Claim> {

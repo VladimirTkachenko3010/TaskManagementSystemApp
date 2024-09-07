@@ -1,3 +1,4 @@
+using Application.Interfaces;
 using Application.Services;
 using Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -46,13 +47,15 @@ builder.Services.AddAuthentication(options =>
 // Add services to the container.
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API", Version = "v1" });
 
-    // Добавляем конфигурацию для использования JWT токенов в Swagger
+    // Adding Configuration for Using JWT Tokens in Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = @"JWT Authorization header using the Bearer scheme. \r\n\r\n 

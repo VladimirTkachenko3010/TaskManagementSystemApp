@@ -1,4 +1,5 @@
-﻿using Application.Services;
+﻿using Application.Interfaces;
+using Application.Services;
 using Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,21 +9,29 @@ namespace TaskManagementSystem.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly UserService _userService;
+        private readonly IUserService _userService;
         private readonly ILogger<UsersController> _logger;
 
-        public UsersController(ILogger<UsersController> logger, UserService userService)
+        public UsersController(ILogger<UsersController> logger, IUserService userService)
         {
             _logger = logger;
             _userService = userService;
         }
 
+        /// <summary>
+        /// register a new user
+        /// </summary>
+        /// <param name="registerModel"></param>
+        /// <returns></returns>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel registerModel)
         {
             // Check if the username or email already exists
             if (_userService.UserExists(registerModel.Username, registerModel.Email))
+            {
+                _logger.LogError("Username or Email already exists.");
                 return BadRequest("Username or Email already exists.");
+            }
 
             try
             {
@@ -37,7 +46,7 @@ namespace TaskManagementSystem.Controllers
                 await _userService.CreateUserAsync(user, registerModel.Password);
                 _logger.LogInformation($"User {user.Username} successfully registered.");
 
-                return Ok(new { Message = "User registered successfully." });
+                return Ok(new Dictionary<string, string> { { "Message", "User registered successfully." } });
             }
             catch (ArgumentException ex)
             {
@@ -46,6 +55,11 @@ namespace TaskManagementSystem.Controllers
             }
         }
 
+        /// <summary>
+        /// login user and give token
+        /// </summary>
+        /// <param name="loginModel"></param>
+        /// <returns></returns>
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginModel loginModel)
         {
@@ -53,14 +67,14 @@ namespace TaskManagementSystem.Controllers
 
             if (user == null)
             {
-                _logger.LogInformation($"User {user.Username} successfully Authenticated.");
+                _logger.LogInformation("Invalid credentials.");
                 return Unauthorized("Invalid credentials.");
             }
 
             var token = _userService.GenerateJwtToken(user);
             _logger.LogInformation($"User {user.Username} successfully Authenticated.");
 
-            return Ok(new { Token = token });
+            return Ok(new Dictionary<string, string> { { "Token", $"{token}" } });
         }
     }
 }
